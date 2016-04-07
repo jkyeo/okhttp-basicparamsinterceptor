@@ -3,7 +3,7 @@
 [![](https://jitpack.io/v/jkyeo/okhttp-basicparamsinterceptor.svg)](https://jitpack.io/#jkyeo/okhttp-basicparamsinterceptor)
 
 A Basic Params Interceptor for okhttp3.
-
+ 
 Via this interceptor we can inject header, url-query and even body (post with "x-www-form-urlencoded" contentType) params into every http request in okhttp3.
 
 ## Setup
@@ -43,3 +43,5 @@ BasicParamsInterceptor basicParamsInterceptor =
 OkHttpClient client = new OkHttpClient.Builder()
         .addInterceptor(basicParamsInterceptor)
         .build();
+```
+
