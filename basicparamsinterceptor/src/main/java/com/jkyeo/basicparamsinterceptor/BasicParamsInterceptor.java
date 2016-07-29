@@ -1,5 +1,7 @@
 package com.jkyeo.basicparamsinterceptor;
 
+import android.text.TextUtils;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,7 +73,7 @@ public class BasicParamsInterceptor implements Interceptor {
 
 
         // process post body inject
-        if (request.method().equals("POST") && request.body().contentType().subtype().equals("x-www-form-urlencoded")) {
+        if (canInjectIntoBody(request)) {
             FormBody.Builder formBodyBuilder = new FormBody.Builder();
             if (paramsMap.size() > 0) {
                 Iterator iterator = paramsMap.entrySet().iterator();
@@ -90,6 +92,26 @@ public class BasicParamsInterceptor implements Interceptor {
 
         request = requestBuilder.build();
         return chain.proceed(request);
+    }
+    private boolean canInjectIntoBody(Request request) {
+        if (request == null) {
+            return false;
+        }
+        if (!TextUtils.equals(request.method(), "POST")) {
+            return false;
+        }
+        RequestBody body = request.body();
+        if (body == null) {
+            return false;
+        }
+        MediaType mediaType = body.contentType();
+        if (mediaType == null) {
+            return false;
+        }
+        if (!TextUtils.equals(mediaType.subtype(), "x-www-form-urlencoded")) {
+            return false;
+        }
+        return true;
     }
 
     // func to inject params into url
