@@ -55,39 +55,29 @@ public class BasicParamsInterceptor implements Interceptor {
             for (String line: headerLinesList) {
                 headerBuilder.add(line);
             }
+            requestBuilder.headers(headerBuilder.build());
         }
-
-        requestBuilder.headers(headerBuilder.build());
         // process header params end
-
-
 
 
         // process queryParams inject whatever it's GET or POST
         if (queryParamsMap.size() > 0) {
-            injectParamsIntoUrl(request, requestBuilder, queryParamsMap);
+            request = injectParamsIntoUrl(request.url().newBuilder(), requestBuilder, queryParamsMap);
         }
-        // process header params end
-
-
-
 
         // process post body inject
-        if (canInjectIntoBody(request)) {
-            FormBody.Builder formBodyBuilder = new FormBody.Builder();
-            if (paramsMap.size() > 0) {
-                Iterator iterator = paramsMap.entrySet().iterator();
-                while (iterator.hasNext()) {
-                    Map.Entry entry = (Map.Entry) iterator.next();
+        if (paramsMap.size() > 0) {
+            if (canInjectIntoBody(request)) {
+                FormBody.Builder formBodyBuilder = new FormBody.Builder();
+                for(Map.Entry<String, String> entry : paramsMap.entrySet()) {
                     formBodyBuilder.add((String) entry.getKey(), (String) entry.getValue());
                 }
+
+                RequestBody formBody = formBodyBuilder.build();
+                String postBodyString = bodyToString(request.body());
+                postBodyString += ((postBodyString.length() > 0) ? "&" : "") +  bodyToString(formBody);
+                requestBuilder.post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded;charset=UTF-8"), postBodyString));
             }
-            RequestBody formBody = formBodyBuilder.build();
-            String postBodyString = bodyToString(request.body());
-            postBodyString += ((postBodyString.length() > 0) ? "&" : "") +  bodyToString(formBody);
-            requestBuilder.post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded;charset=UTF-8"), postBodyString));
-        } else {    // can't inject into body, then inject into url
-            injectParamsIntoUrl(request, requestBuilder, paramsMap);
         }
 
         request = requestBuilder.build();
@@ -115,17 +105,18 @@ public class BasicParamsInterceptor implements Interceptor {
     }
 
     // func to inject params into url
-    private void injectParamsIntoUrl(Request request, Request.Builder requestBuilder, Map<String, String> paramsMap) {
-        HttpUrl.Builder httpUrlBuilder = request.url().newBuilder();
+    private Request injectParamsIntoUrl(HttpUrl.Builder httpUrlBuilder, Request.Builder requestBuilder, Map<String, String> paramsMap) {
         if (paramsMap.size() > 0) {
             Iterator iterator = paramsMap.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry entry = (Map.Entry) iterator.next();
                 httpUrlBuilder.addQueryParameter((String) entry.getKey(), (String) entry.getValue());
             }
+            requestBuilder.url(httpUrlBuilder.build());
+            return requestBuilder.build();
         }
 
-        requestBuilder.url(httpUrlBuilder.build());
+        return null;
     }
 
     private static String bodyToString(final RequestBody request){
