@@ -14,6 +14,7 @@ import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
@@ -66,21 +67,48 @@ public class BasicParamsInterceptor implements Interceptor {
         }
 
         // process post body inject
-        if (paramsMap.size() > 0) {
-            if (canInjectIntoBody(request)) {
-                FormBody.Builder formBodyBuilder = new FormBody.Builder();
-                for(Map.Entry<String, String> entry : paramsMap.entrySet()) {
-                    formBodyBuilder.add((String) entry.getKey(), (String) entry.getValue());
+        if (paramsMap != null && paramsMap.size() > 0 && request.method().equals("POST")) {
+            if (request.body() instanceof FormBody) {
+                FormBody.Builder newFormBodyBuilder = new FormBody.Builder();
+                if (paramsMap.size() > 0) {
+                    Iterator iterator = paramsMap.entrySet().iterator();
+                    while (iterator.hasNext()) {
+                        Map.Entry entry = (Map.Entry) iterator.next();
+                        newFormBodyBuilder.add((String) entry.getKey(), (String) entry.getValue());
+                    }
                 }
 
-                RequestBody formBody = formBodyBuilder.build();
-                String postBodyString = bodyToString(request.body());
-                postBodyString += ((postBodyString.length() > 0) ? "&" : "") +  bodyToString(formBody);
-                requestBuilder.post(RequestBody.create(MediaType.parse("application/x-www-form-urlencoded;charset=UTF-8"), postBodyString));
-            }
-        }
+                FormBody oldFormBody = (FormBody) request.body();
+                int paramSize = oldFormBody.size();
+                if (paramSize > 0) {
+                    for (int i=0;i<paramSize;i++) {
+                        newFormBodyBuilder.add(oldFormBody.name(i), oldFormBody.value(i));
+                    }
+                }
 
-        request = requestBuilder.build();
+                requestBuilder.post(newFormBodyBuilder.build());
+                request = requestBuilder.build();
+            } else if (request.body() instanceof MultipartBody) {
+                MultipartBody.Builder multipartBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+
+                Iterator iterator = paramsMap.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Map.Entry entry = (Map.Entry) iterator.next();
+                    multipartBuilder.addFormDataPart((String) entry.getKey(), (String) entry.getValue());
+                }
+
+                List<MultipartBody.Part> oldParts = ((MultipartBody)request.body()).parts();
+                if (oldParts != null && oldParts.size() > 0) {
+                    for (MultipartBody.Part part : oldParts) {
+                        multipartBuilder.addPart(part);
+                    }
+                }
+
+                requestBuilder.post(multipartBuilder.build());
+                request = requestBuilder.build();
+            }
+
+        }
         return chain.proceed(request);
     }
     private boolean canInjectIntoBody(Request request) {
