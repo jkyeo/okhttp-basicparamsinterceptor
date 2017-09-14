@@ -109,7 +109,6 @@ public class BasicParamsInterceptor implements Interceptor {
                 requestBuilder.post(newFormBodyBuilder.build());
                 request = requestBuilder.build();
             }
-
         }
         return chain.proceed(request);
     }
