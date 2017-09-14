@@ -68,27 +68,7 @@ public class BasicParamsInterceptor implements Interceptor {
 
         // process post body inject
         if (paramsMap != null && paramsMap.size() > 0 && request.method().equals("POST")) {
-            if (request.body() instanceof FormBody) {
-                FormBody.Builder newFormBodyBuilder = new FormBody.Builder();
-                if (paramsMap.size() > 0) {
-                    Iterator iterator = paramsMap.entrySet().iterator();
-                    while (iterator.hasNext()) {
-                        Map.Entry entry = (Map.Entry) iterator.next();
-                        newFormBodyBuilder.add((String) entry.getKey(), (String) entry.getValue());
-                    }
-                }
-
-                FormBody oldFormBody = (FormBody) request.body();
-                int paramSize = oldFormBody.size();
-                if (paramSize > 0) {
-                    for (int i=0;i<paramSize;i++) {
-                        newFormBodyBuilder.add(oldFormBody.name(i), oldFormBody.value(i));
-                    }
-                }
-
-                requestBuilder.post(newFormBodyBuilder.build());
-                request = requestBuilder.build();
-            } else if (request.body() instanceof MultipartBody) {
+            if (request.body() instanceof MultipartBody) {
                 MultipartBody.Builder multipartBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
 
                 Iterator iterator = paramsMap.entrySet().iterator();
@@ -105,6 +85,28 @@ public class BasicParamsInterceptor implements Interceptor {
                 }
 
                 requestBuilder.post(multipartBuilder.build());
+                request = requestBuilder.build();
+            }else {
+                FormBody.Builder newFormBodyBuilder = new FormBody.Builder();
+                if (paramsMap.size() > 0) {
+                    Iterator iterator = paramsMap.entrySet().iterator();
+                    while (iterator.hasNext()) {
+                        Map.Entry entry = (Map.Entry) iterator.next();
+                        newFormBodyBuilder.add((String) entry.getKey(), (String) entry.getValue());
+                    }
+                }
+                if (request.body() instanceof FormBody) {
+                    FormBody oldFormBody = (FormBody) request.body();
+                    int paramSize = oldFormBody.size();
+                    if (paramSize > 0) {
+                        for (int i=0;i<paramSize;i++) {
+                            newFormBodyBuilder.add(oldFormBody.name(i), oldFormBody.value(i));
+                        }
+                    }
+
+                }
+
+                requestBuilder.post(newFormBodyBuilder.build());
                 request = requestBuilder.build();
             }
 
